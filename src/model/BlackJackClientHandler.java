@@ -31,7 +31,6 @@ public class BlackJackClientHandler implements Runnable {
             // Lógica para recibir y enviar mensajes con el cliente
             String message;
 
-            // Obtener el nombre del jugador desde el cliente
             String playerName = input.readLine();
             player = new Player(playerName);
             game.addPlayer(player);
@@ -74,7 +73,6 @@ public class BlackJackClientHandler implements Runnable {
             }
         } else if (message.equalsIgnoreCase("STAND")) {
             game.playerStand(player);
-
             if (player.getPlayerState().equalsIgnoreCase("Jugando")) {
                 response = "Es el turno del siguiente jugador.";
             } else if (player.getPlayerState().equalsIgnoreCase("Ganador")) {

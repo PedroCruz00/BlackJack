@@ -30,11 +30,13 @@ public class Game {
 
         if (player.getScore() > 21) {
             player.setPlayerState("Fuera");
+            player.setInGame(false);
         }
     }
 
     public void playerStand(Player player) {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+        player.setInGame(false);
     }
 
     public void determineWinner() {

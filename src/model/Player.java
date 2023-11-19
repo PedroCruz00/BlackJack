@@ -7,11 +7,13 @@ public class Player {
     private String name;
     private List<Card> hand;
     private String playerState;
+    private boolean inGame;
 
     public Player(String name) {
         this.name = name;
         hand = new ArrayList<>();
         playerState = "Jugando";
+        inGame = true;
     }
 
     public void addCardToHand(Card card) {
@@ -49,5 +51,13 @@ public class Player {
 
     public void setPlayerState(String state) {
         playerState = state;
+    }
+
+    public boolean getInGame(){
+        return inGame;
+    }
+
+    public void setInGame(boolean inGame) {
+        this.inGame = inGame;
     }
 }
