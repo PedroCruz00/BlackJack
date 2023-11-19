@@ -19,6 +19,9 @@ public class BlackJackServer {
     private List<BlackJackClientHandler> connectedClients;
     private int connectedPlayerCount;
 
+    private static final int PING_INTERVAL = 5000; // Intervalo de tiempo para enviar pings (en milisegundos)
+    private boolean gameRunning = false; // Variable para verificar si el juego está en curso
+
     public BlackJackServer() {
         try {
             serverSocket = new ServerSocket(PORT);
@@ -33,6 +36,7 @@ public class BlackJackServer {
     }
 
     public void start() {
+        checkClientConnections(); // Iniciar la verificación de conexión
         while (connectedPlayerCount < 3) {
             try {
                 Socket clientSocket = serverSocket.accept();
@@ -101,9 +105,67 @@ public class BlackJackServer {
     }
 
     private void startGame() {
+        gameRunning = true;
         String message = "¡La partida ha comenzado!";
         broadcastMessage(message);
     }
+
+    public void stopGame() {
+        gameRunning = false;
+
+        broadcastMessage("La partida ha finalizado");
+
+        // Cerrar conexiones
+        executorService.shutdown();
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Método para verificar la conexión de los clientes periódicamente
+    private void checkClientConnections() {
+        new Thread(() -> {
+            while (gameRunning) {
+                try {
+                    Thread.sleep(PING_INTERVAL);
+
+                    // Lógica para verificar la conexión de cada cliente
+                    for (BlackJackClientHandler client : connectedClients) {
+                        if (!client.isClientActive()) {
+                            handleClientDisconnection(client);
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    // Método para manejar la desconexión de un cliente
+    private void handleClientDisconnection(BlackJackClientHandler disconnectedClient) {
+        disconnectedClient.setDisconnected(true);
+        
+        // Encontrar el índice del cliente desconectado en la lista de clientes conectados
+        int disconnectedClientIndex = connectedClients.indexOf(disconnectedClient);
+        
+        int nextActivePlayerIndex = (disconnectedClientIndex + 1) % connectedClients.size();
+        boolean allPlayersInactive = true;
+        
+        for (int i = nextActivePlayerIndex; i != disconnectedClientIndex; i = (i + 1) % connectedClients.size()) {
+            BlackJackClientHandler nextPlayer = connectedClients.get(i);
+            if (nextPlayer.isClientActive()) {
+                allPlayersInactive = false;
+                break;
+            }
+        }
+
+        if (allPlayersInactive) {
+            stopGame();
+        }
+    }    
 
     public static void main(String[] args) {
         BlackJackServer server = new BlackJackServer();
