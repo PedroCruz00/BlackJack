@@ -12,10 +12,11 @@ public class BlackJackClientHandler implements Runnable {
     private PrintWriter output;
     private Game game;
     private Player player;
+    private BlackJackServer server;
 
-    public BlackJackClientHandler(Socket socket) {
+    public BlackJackClientHandler(Socket socket, BlackJackServer server) {
         this.clientSocket = socket;
-
+        this.server = server;
         try {
             input = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             output = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -66,16 +67,16 @@ public class BlackJackClientHandler implements Runnable {
         if (message.equalsIgnoreCase("HIT")) {
             game.playerHit(player);
 
-            if (player.getPlayerState().equalsIgnoreCase("Fuera")) {
+            if (player.getPlayerState().equalsIgnoreCase("Busted")) {
                 response = "Has superado 21. ¡Perdiste!";
             } else {
                 response = "Carta recibida: " + player.getHand().get(player.getHand().size() - 1);
             }
         } else if (message.equalsIgnoreCase("STAND")) {
             game.playerStand(player);
-            if (player.getPlayerState().equalsIgnoreCase("Jugando")) {
+            if (player.getPlayerState().equalsIgnoreCase("Playing")) {
                 response = "Es el turno del siguiente jugador.";
-            } else if (player.getPlayerState().equalsIgnoreCase("Ganador")) {
+            } else if (player.getPlayerState().equalsIgnoreCase("Winner")) {
                 response = "¡Felicidades! ¡Eres el ganador!";
             }
         } else if (message.equalsIgnoreCase("QUIT")) {
@@ -85,5 +86,8 @@ public class BlackJackClientHandler implements Runnable {
         }
 
         return response;
+    }
+    public void sendMessage(String message) {
+        output.println(message);
     }
 }
