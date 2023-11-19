@@ -41,6 +41,14 @@ public class Player {
         return score;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public int getHandValue() {
+        return getScore();
+    }
+
     public List<Card> getHand() {
         return hand;
     }
@@ -59,5 +67,7 @@ public class Player {
 
     public void setInGame(boolean inGame) {
         this.inGame = inGame;
+    }
+    public void resetHand() {hand.clear();
     }
 }

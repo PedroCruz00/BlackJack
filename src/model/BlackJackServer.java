@@ -4,31 +4,37 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class BlackJackServer {
-    private static final int PORT = 8081;
+    private static final int PORT = 8080;
     private static final int THREAD_POOL_SIZE = 10;
     private ServerSocket serverSocket;
     private ExecutorService executorService;
-    private Lock lock;
     private List<BlackJackClientHandler> connectedClients;
     private int connectedPlayerCount;
+    private Set<String> playerNames;
+    private Deck deck;
+    private boolean gameStarted;
+    private int currentPlayerIndex;
 
-    private static final int PING_INTERVAL = 5000; // Intervalo de tiempo para enviar pings (en milisegundos)
-    private boolean gameRunning = false; // Variable para verificar si el juego está en curso
+    private Game game;
 
     public BlackJackServer() {
         try {
             serverSocket = new ServerSocket(PORT);
             executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-            lock = new ReentrantLock();
+            this.playerNames = new HashSet<>();
+            this.currentPlayerIndex = 0;
             connectedClients = new ArrayList<>();
             connectedPlayerCount = 0;
+            deck = new Deck();
+            gameStarted = false;
+            game = new Game();  // Crear instancia de Game
             System.out.println("Servidor en ejecución. Esperando conexiones en el puerto " + PORT + "...");
         } catch (IOException e) {
             e.printStackTrace();
@@ -36,136 +42,176 @@ public class BlackJackServer {
     }
 
     public void start() {
-        checkClientConnections(); // Iniciar la verificación de conexión
-        while (connectedPlayerCount < 3) {
+        while (true) {
             try {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Cliente conectado: " + clientSocket);
-
-                lock.lock();
-                try {
-                    connectedPlayerCount++;
-                    notifyWaitingScreen(connectedPlayerCount);
-                    updateConnectedPlayerCount();
-
-                    if (connectedPlayerCount == 3) {
-                        System.out.println("El juego ha comenzado");
-                        startGame();
-                        break; // Salir del bucle una vez que se inicie el juego
-                    }
-                } finally {
-                    lock.unlock();
-                }
-
+                System.out.println("Nueva conexión entrante: " + clientSocket);
                 BlackJackClientHandler clientHandler = new BlackJackClientHandler(clientSocket, this);
                 connectedClients.add(clientHandler);
                 executorService.execute(clientHandler);
+                incrementConnectedPlayerCount();
+                updateConnectedPlayerCount();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
-        // Cerrar el servidor después de que se completen las 3 conexiones
-        executorService.shutdown();
-        try {
-            serverSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
-    public void decrementConnectedPlayerCount() {
-        lock.lock();
-        try {
-            connectedPlayerCount--;
-        } finally {
-            lock.unlock();
+    private void gameLoop() {
+        while (gameStarted) {
+            // Obtener el jugador actual
+            BlackJackClientHandler currentPlayer = connectedClients.get(currentPlayerIndex);
+
+            // Solicitar acción al jugador actual
+            currentPlayer.sendMessage("Es tu turno. ¿Quieres PEDIR o PARAR?");
+
+            // Esperar la respuesta del jugador actual
+            String playerAction = currentPlayer.waitForAction();
+
+            // Procesar la acción del jugador actual
+            processPlayerAction(currentPlayer, playerAction);
+
+            // Pasar al siguiente jugador
+            currentPlayerIndex = (currentPlayerIndex + 1) % connectedPlayerCount;
         }
+
+        // La partida ha terminado, realizar acciones de finalización
+        endGame();
     }
 
-    public void broadcastMessage(String message) {
-        lock.lock();
-        try {
-            for (BlackJackClientHandler client : connectedClients) {
-                client.sendMessage(message);
+    public boolean allPlayersStand() {
+        for (BlackJackClientHandler player : connectedClients) {
+            if (!player.getPlayer().getPlayerState().equalsIgnoreCase("Stand")) {
+                return false;
             }
-        } finally {
-            lock.unlock();
+        }
+        return true;
+    }
+
+    public boolean allPlayersBusted() {
+        for (BlackJackClientHandler player : connectedClients) {
+            if (!player.getPlayer().getPlayerState().equalsIgnoreCase("Busted")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public synchronized void broadcastMessage(String message) {
+        for (BlackJackClientHandler clientHandler : connectedClients) {
+            clientHandler.sendMessage(message);
         }
     }
 
-    private void notifyWaitingScreen(int connectedPlayerCount) {
-        String message = "Esperando a " + (3 - connectedPlayerCount) + " jugadores más para iniciar la partida.";
-        broadcastMessage(message);
-    }
+    public void startGame() {
+        // Repartir cartas iniciales
+        for (BlackJackClientHandler clientHandler : connectedClients) {
+            Hand hand = clientHandler.getHand();
+            hand.addCard(deck.dealCard());
+            hand.addCard(deck.dealCard());
 
-    private void updateConnectedPlayerCount() {
-        String message = "Jugadores conectados: " + connectedPlayerCount;
-        broadcastMessage(message);
-    }
-
-    private void startGame() {
-        gameRunning = true;
-        String message = "¡La partida ha comenzado!";
-        broadcastMessage(message);
-    }
-
-    public void stopGame() {
-        gameRunning = false;
-
-        broadcastMessage("La partida ha finalizado");
-
-        // Cerrar conexiones
-        executorService.shutdown();
-        try {
-            serverSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            clientHandler.sendMessage("Tus cartas iniciales: " + hand);
+            clientHandler.sendMessage("Puntuación actual: " + hand.getScore());
         }
+
+        // Comenzar el bucle de juego
+        gameStarted = true;
+        gameLoop();
     }
 
-    // Método para verificar la conexión de los clientes periódicamente
-    private void checkClientConnections() {
-        new Thread(() -> {
-            while (gameRunning) {
-                try {
-                    Thread.sleep(PING_INTERVAL);
-
-                    // Lógica para verificar la conexión de cada cliente
-                    for (BlackJackClientHandler client : connectedClients) {
-                        if (!client.isClientActive()) {
-                            handleClientDisconnection(client);
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+    public synchronized void processPlayerAction(BlackJackClientHandler player, String action) {
+        switch (action.toUpperCase()) {
+            case "PEDIR":
+                player.getHand().addCard(deck.dealCard());
+                player.sendMessage("Carta recibida: " + player.getHand().getCards().get(player.getHand().getCards().size() - 1));
+                player.sendMessage("Puntuación actual: " + player.getHand().getScore());
+                if (player.getHand().isBust()) {
+                    player.sendMessage("Has superado 21. ¡Perdiste!");
+                    decrementConnectedPlayerCount();
+                    checkEndGame();
                 }
-            }
-        }).start();
+                break;
+            case "PARAR":
+                player.getPlayer().setPlayerState("Stand");
+                decrementConnectedPlayerCount();
+                checkEndGame();
+                break;
+            default:
+                player.sendMessage("Comando no válido. ¿Quieres PEDIR o PARAR?");
+                break;
+        }
     }
 
-    // Método para manejar la desconexión de un cliente
-    private void handleClientDisconnection(BlackJackClientHandler disconnectedClient) {
-        disconnectedClient.setDisconnected(true);
-        
-        // Encontrar el índice del cliente desconectado en la lista de clientes conectados
-        int disconnectedClientIndex = connectedClients.indexOf(disconnectedClient);
-        
-        int nextActivePlayerIndex = (disconnectedClientIndex + 1) % connectedClients.size();
-        boolean allPlayersInactive = true;
-        
-        for (int i = nextActivePlayerIndex; i != disconnectedClientIndex; i = (i + 1) % connectedClients.size()) {
-            BlackJackClientHandler nextPlayer = connectedClients.get(i);
-            if (nextPlayer.isClientActive()) {
-                allPlayersInactive = false;
-                break;
-            }
+    private void checkEndGame() {
+        if (allPlayersStand() || allPlayersBusted()) {
+            endGame();
         }
+    }
 
-        if (allPlayersInactive) {
-            stopGame();
+    private void endGame() {
+        resetGame();
+    }
+
+    public synchronized void removeClient(BlackJackClientHandler clientHandler) {
+        connectedClients.remove(clientHandler);
+        decrementConnectedPlayerCount();
+        updateConnectedPlayerCount();
+    }
+
+    public synchronized void incrementConnectedPlayerCount() {
+        connectedPlayerCount++;
+        if (connectedPlayerCount == 3 && !gameStarted) {
+            gameStarted = true;
+            broadcastMessage("¡La partida ha comenzado!");
+            startGame();
+        } else {
+            broadcastMessage("Esperando a que se conecten más jugadores...");
         }
-    }    
+    }
+
+    public synchronized void decrementConnectedPlayerCount() {
+        connectedPlayerCount--;
+        if (connectedPlayerCount == 0) {
+            resetGame();
+        }
+    }
+
+    public synchronized void updateConnectedPlayerCount() {
+        broadcastMessage("Jugadores conectados: " + connectedPlayerCount);
+    }
+
+    public boolean isPlayerNameTaken(String playerName) {
+        return playerNames.contains(playerName);
+    }
+
+    public synchronized void addPlayerName(String playerName) {
+        playerNames.add(playerName);
+    }
+
+    private void resetGame() {
+        gameStarted = false;
+        deck = new Deck();
+        game.reset();
+        for (BlackJackClientHandler clientHandler : connectedClients) {
+            clientHandler.resetGame();
+        }
+    }
+
+    public Deck getDeck() {
+        return deck;
+    }
+
+    public boolean isGameStarted() {
+        return gameStarted;
+    }
+
+    public Game getGame() {
+        return game;
+    }
+
+    public List<BlackJackClientHandler> getConnectedClients() {
+        return connectedClients;
+    }
 
     public static void main(String[] args) {
         BlackJackServer server = new BlackJackServer();

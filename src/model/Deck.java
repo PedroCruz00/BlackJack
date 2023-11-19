@@ -1,5 +1,4 @@
 package model;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,12 +25,7 @@ public class Deck {
         }
         return cards.remove(cards.size() - 1);
     }
-    public Card drawCard() {
-        if (cards.isEmpty()) {
-            throw new IllegalStateException("The deck is empty.");
-        }
-        return cards.remove(0);
-    }
+
     public List<Card> getCards() {
         return cards;
     }

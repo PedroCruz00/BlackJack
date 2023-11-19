@@ -1,4 +1,5 @@
 package model;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +43,10 @@ public class Hand {
 
     public boolean isBlackjack() {
         return cards.size() == 2 && getScore() == 21;
+    }
+
+    public List<Card> getCards() {
+        return cards;
     }
 
     @Override

@@ -8,7 +8,7 @@ import java.net.Socket;
 
 public class BlackJackClient {
     private static final String SERVER_IP = "localhost";
-    private static final int SERVER_PORT = 8081;
+    private static final int SERVER_PORT = 8080;
     private Socket socket;
     private BufferedReader input;
     private PrintWriter output;
