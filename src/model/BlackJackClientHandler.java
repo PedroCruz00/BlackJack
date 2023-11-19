@@ -14,6 +14,8 @@ public class BlackJackClientHandler implements Runnable {
     private Player player;
     private BlackJackServer server;
 
+    private boolean disconnected = false;
+
     public BlackJackClientHandler(Socket socket, BlackJackServer server) {
         this.clientSocket = socket;
         this.server = server;
@@ -59,6 +61,14 @@ public class BlackJackClientHandler implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+    public boolean isClientActive() {
+        return !disconnected;
+    }
+
+    public void setDisconnected(boolean disconnected) {
+        this.disconnected = disconnected;
     }
 
     private String processMessage(String message) {

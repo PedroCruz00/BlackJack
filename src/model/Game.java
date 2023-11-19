@@ -34,6 +34,10 @@ public class Game {
         }
     }
 
+    public void removePlayer(Player player) {
+        players.remove(player);
+    }
+
     public void playerStand(Player player) {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
         player.setInGame(false);
