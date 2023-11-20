@@ -90,7 +90,6 @@ public class StartClient extends JFrame {
                     JOptionPane.showMessageDialog(null, "Conectando al servidor en " + serverAddress + ":" + serverPort +
                             " como " + playerName);
 
-                    startClient();
                 }catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(null, "Ingresa un puerto válido.");
                 }
@@ -107,10 +106,7 @@ public class StartClient extends JFrame {
         add(mainPanel);
     }
 
-    public void startClient() {
-        TestClient client = new TestClient(serverAddressField.getText(), serverPortField.getText());
-        client.run();
-    }
+
 
 
 
