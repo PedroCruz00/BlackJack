@@ -57,7 +57,7 @@ public class Dealer extends JFrame {
         setVisible(true);
 
         try {
-            server = new ServerSocket(23555, 100);
+            server = new ServerSocket(8080, 100);
         } catch (IOException e) {
             e.printStackTrace();
         }

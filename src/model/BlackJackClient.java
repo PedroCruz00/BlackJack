@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
 
 public class BlackJackClient extends JFrame {
@@ -86,7 +87,26 @@ public class BlackJackClient extends JFrame {
             closeConnection();
         }
     }
+    private void connectToServer() throws IOException
+    {
+        displayMessage( "Attempting connection\n" );
 
+        socket = new Socket( InetAddress.getByName( chatServer ), serverPort );
+
+        displayMessage( "Connected to: " +
+                socket.getInetAddress().getHostName() );
+    }
+
+    private void getStreams() throws IOException
+    {
+        // set up output stream for objects
+        output = new ObjectOutputStream( socket.getOutputStream() );
+        output.flush(); // flush output buffer to send header information
+
+        // set up input stream for objects
+        input = new ObjectInputStream( socket.getInputStream() );
+        displayMessage( "\nGot I/O streams\n" );
+    } // en
     private void processConnection() throws IOException
     {
 
@@ -129,11 +149,30 @@ public class BlackJackClient extends JFrame {
         try
         {
             output.writeObject(  message );
-            output.flush(); // flush data to output
+            output.flush();
 
         } // end try
         catch ( IOException ioException ) {
 
+        }
+    }
+    public void runClient()
+    {
+        try
+        {
+            connectToServer();
+            getStreams();
+            processConnection();
+        }
+        catch ( EOFException eofException )
+        {
+            displayMessage( "\nClient terminated connection" );
+        }
+        catch ( IOException ioException )
+        {}
+        finally
+        {
+            closeConnection();
         }
     }
     private void displayMessage( final String messageToDisplay )
@@ -141,7 +180,7 @@ public class BlackJackClient extends JFrame {
         SwingUtilities.invokeLater(
                 new Runnable()
                 {
-                    public void run() // updates displayArea
+                    public void run()
                     {
                         displayArea.append( messageToDisplay );
                     }
