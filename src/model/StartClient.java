@@ -6,21 +6,20 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class Menu extends JFrame {
+public class StartClient extends JFrame {
 
     private JTextField playerNameField;
-    private JTextField serverAddressField;
-    private JTextField serverPortField;
+    private  JTextField serverAddressField;
+    private  JTextField serverPortField;
     private JButton connectButton;
     private JButton exitButton;
 
-    public Menu() {
+    public StartClient() {
 
         setTitle("Blackjack Client");
         setSize(400, 250);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-
         initComponents();
         setCustomBackground();
     }
@@ -93,7 +92,8 @@ public class Menu extends JFrame {
                     JOptionPane.showMessageDialog(null, "Conectando al servidor en " + serverAddress + ":" + serverPort +
                             " como " + playerName);
 
-                    // Lógica de conexión y juego aquí
+                    BlackJackClient client = new BlackJackClient(serverAddressField.getText(),serverPortField.getText());
+                    client.start();
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(null, "Ingresa un puerto válido.");
                 }
@@ -115,7 +115,12 @@ public class Menu extends JFrame {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                new Menu().setVisible(true);
+                try {
+                    javax.swing.UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                new StartClient().setVisible(true);
             }
         });
     }

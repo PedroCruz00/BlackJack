@@ -20,6 +20,15 @@ public class Player {
         hand.add(card);
     }
 
+    public void CardHit(Card card) {
+        if (inGame) {
+            hand.add(card);
+            if (getScore() > 21) {
+                playerState = "Bust";
+            }
+        }
+    }
+
     public int getScore() {
         int score = 0;
         int numAces = 0;

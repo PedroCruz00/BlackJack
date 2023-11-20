@@ -17,6 +17,10 @@ public class Card {
         return rank;
     }
 
+    public Suit getSuit() {
+        return suit;
+    }
+
     public String toString() {
         return rank.toString() + " of " + suit.toString();
     }
