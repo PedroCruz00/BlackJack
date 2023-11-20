@@ -24,6 +24,7 @@ public class Dealer extends JFrame {
     private Player dealer;
     private boolean roundOver;
 
+
     public Dealer() {
         super("Dealer");
 
@@ -80,6 +81,26 @@ public class Dealer extends JFrame {
         executor.execute(sockServer);
     }
 
+ loadCode
+    public void playerStay(int playerIndex) {
+        if (!roundOver) {
+            players.get(playerIndex).setPlayerState("Stay");
+            checkRoundOver();
+        }
+    }
+
+    private void checkRoundOver() {
+        boolean allPlayersStayed = players.stream().allMatch(player -> player.getPlayerState().equals("Stay"));
+        if (allPlayersStayed) {
+            while (dealer.getScore() < 16) {
+                dealer.addCardToHand(deck.dealCard());
+            }
+            roundOver = true;
+            displayResults();
+        }
+    }
+
+ master
     public void displayResults() {
         for (SockServer sockServer : sockServers) {
             Player player = sockServer.getPlayer();
@@ -111,6 +132,14 @@ public class Dealer extends JFrame {
             dealer.resetHand();
             dealCards();
             displayMessage("\n\nCARDS DEALT\n\n");
+
+            drawPlayerCards();
+        }
+    }
+
+    private void drawPlayerCards() {
+        for (SockServer sockServer : sockServers) {
+            sockServer.drawPlayerCards();
         }
     }
 
@@ -137,10 +166,16 @@ public class Dealer extends JFrame {
         player.addCardToHand(deck.dealCard());
         player.addCardToHand(deck.dealCard());
 
-        sockServer.sendData("You were dealt: " + player.getHand().get(0).toString() +
-                " and " + player.getHand().get(1).toString() + "\n");
+        sockServer.sendData("You were dealt: " + player.getHand().get(0) +
+                " and " + player.getHand().get(1) + "\n");
+
 
         sockServer.sendData("Your total: " + player.getHandValue() + "\n");
+
+        for (Card card : player.getHand()) {
+            CardComponent cardComponent = new CardComponent(card);
+            sockServer.playerCardComponents.add(cardComponent);
+        }
     }
 
     public void playerHit(SockServer sockServer) {
@@ -241,9 +276,10 @@ public class Dealer extends JFrame {
         SwingUtilities.invokeLater(() -> displayArea.append(messageToDisplay));
     }
 
-    public List<SockServer> getSockServers(){
+    public List<SockServer> getSockServers() {
         return sockServers;
     }
+
     public ServerSocket getServer() {
         return server;
     }
@@ -259,9 +295,11 @@ public class Dealer extends JFrame {
         private Socket connection;
         private Dealer dealer;
         private Player player;
+        private List<CardComponent> playerCardComponents;
 
 
         public SockServer(Socket connection, Dealer dealer) {
+            this.playerCardComponents = new ArrayList<>();
             this.connection = connection;
             this.dealer = dealer;
             this.player = new Player("Player" + dealer.getSockServers().size());
@@ -278,6 +316,21 @@ public class Dealer extends JFrame {
             }
         }
 
+        public void drawPlayerCards() {
+            // Crea un JFrame para mostrar las cartas del jugador
+            JFrame playerFrame = new JFrame("Player: " + player.getName());
+            playerFrame.setSize(300, 150);
+            playerFrame.setLayout(new FlowLayout());
+
+            // Agrega las cartas del jugador al JFrame
+            for (CardComponent cardComponent : playerCardComponents) {
+                playerFrame.getContentPane().add(cardComponent);
+            }
+
+            // Muestra el JFrame
+            playerFrame.setVisible(true);
+        }
+
         private void getStreams() throws IOException {
             output = new ObjectOutputStream(connection.getOutputStream());
             output.flush();
@@ -292,14 +345,15 @@ public class Dealer extends JFrame {
 
             do {
                 try {
-                    String message = (String) input.readObject();
-                    dealer.displayMessage("Received: " + message + "\n");
+                    Card card = (Card) input.readObject();
+                    dealer.displayMessage("Received: " + card + "\n");
 
-                    if (message.equals("hit")) {
+                    if (card.equals("hit")) {
                         dealer.playerHit(this);
-                    } else if (message.equals("stay")) {
+                    } else if (card.equals("stay")) {
                         dealer.playerStand(this);
                     }
+
 
                 } catch (ClassNotFoundException e) {
                     dealer.displayMessage("Unknown object type received\n");
@@ -336,5 +390,6 @@ public class Dealer extends JFrame {
             return player;
         }
     }
+
 }
 

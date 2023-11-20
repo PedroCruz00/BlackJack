@@ -106,8 +106,25 @@ public class StartClient extends JFrame {
         add(mainPanel);
     }
 
+ loadCode
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    javax.swing.UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                new StartClient().setVisible(true);
+            }
+        });
+    }
+}
+
 
 
 
 
 }
+ master
