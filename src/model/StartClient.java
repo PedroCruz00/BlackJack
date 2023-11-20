@@ -25,12 +25,10 @@ public class StartClient extends JFrame {
     }
 
     private void setCustomBackground() {
-        // Eliminamos la imagen de fondo
-        getContentPane().setBackground(new Color(240, 240, 240)); // Color gris claro
+        getContentPane().setBackground(new Color(240, 240, 240));
     }
 
     private void initComponents() {
-        // Utilizamos un panel para agregar el borde
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new GridLayout(5, 2, 10, 10));
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -71,8 +69,8 @@ public class StartClient extends JFrame {
         mainPanel.add(serverAddressField);
         mainPanel.add(portLabel);
         mainPanel.add(serverPortField);
-        mainPanel.add(new JLabel()); // Espacio en blanco
-        mainPanel.add(new JLabel()); // Espacio en blanco
+        mainPanel.add(new JLabel());
+        mainPanel.add(new JLabel());
         mainPanel.add(connectButton);
         mainPanel.add(exitButton);
 
@@ -92,11 +90,8 @@ public class StartClient extends JFrame {
                     JOptionPane.showMessageDialog(null, "Conectando al servidor en " + serverAddress + ":" + serverPort +
                             " como " + playerName);
 
-                    BlackJackClient client = new BlackJackClient(serverAddressField.getText(),serverPortField.getText());
-                    client.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-                    client.runClient();
-
-                } catch (NumberFormatException ex) {
+                    startClient();
+                }catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(null, "Ingresa un puerto válido.");
                 }
             }
@@ -109,21 +104,14 @@ public class StartClient extends JFrame {
             }
         });
 
-        // Agregamos el panel al contenido del JFrame
         add(mainPanel);
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    javax.swing.UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                new StartClient().setVisible(true);
-            }
-        });
+    public void startClient() {
+        TestClient client = new TestClient(serverAddressField.getText(), serverPortField.getText());
+        client.run();
     }
+
+
+
 }

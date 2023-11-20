@@ -46,10 +46,10 @@ public class BlackJackClient extends JFrame {
         stay.addActionListener(
                 new ActionListener()
                 {
-                    // send message to server
                     public void actionPerformed( ActionEvent event )
                     {
                         sendData( "stay" );
+                        buttons.setVisible(false);
                     }
                 }
         );
@@ -105,13 +105,16 @@ public class BlackJackClient extends JFrame {
                 displayMessage( "\n" + message );
                 if (message.contains("Bust!") || message.contains("Please Wait")){
                     buttons.setVisible(false);
+                }else {
+                    buttons.setVisible(true);
                 }
 
-            } // end try
+
+            }
             catch ( ClassNotFoundException classNotFoundException )
             {
                 displayMessage( "\nUnknown object type received" );
-            } // end catch
+            }
 
         } while ( !message.equals( "SERVER>>> TERMINATE" ) );
     }
@@ -176,4 +179,6 @@ public class BlackJackClient extends JFrame {
     public boolean getInGame(){
         return inGame;
     }
+
+
 }

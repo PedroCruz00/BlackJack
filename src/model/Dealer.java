@@ -79,22 +79,7 @@ public class Dealer extends JFrame {
         sockServers.add(sockServer);
         executor.execute(sockServer);
     }
-    public void playerStay(int playerIndex) {
-        if (!roundOver) {
-            players.get(playerIndex).setPlayerState("Stay");
-            checkRoundOver();
-        }
-    }
-    private void checkRoundOver() {
-        boolean allPlayersStayed = players.stream().allMatch(player -> player.getPlayerState().equals("Stay"));
-        if (allPlayersStayed) {
-            while (dealer.getScore() < 16) {
-                dealer.addCardToHand(deck.dealCard());
-            }
-            roundOver = true;
-            displayResults();
-        }
-    }
+
     public void displayResults() {
         for (SockServer sockServer : sockServers) {
             Player player = sockServer.getPlayer();
@@ -139,7 +124,11 @@ public class Dealer extends JFrame {
     private void dealDealer() {
         dealer.addCardToHand(deck.dealCard());
         dealer.addCardToHand(deck.dealCard());
+        System.out.println(dealer.getHand().toString());
         sendDataToAll("Dealer's face-up card: " + dealer.getHand().get(0).toString() + "\n");
+        displayMessage("Dealer's hand: " + dealer.getHand() + "\n");
+        displayMessage("Dealer's value: " + dealer.getHandValue() + "\n");
+
     }
 
     private void dealPlayer(SockServer sockServer) {
@@ -170,7 +159,7 @@ public class Dealer extends JFrame {
         }
     }
 
-    public void playerStand(SockServer sockServer) {
+    public synchronized void playerStand(SockServer sockServer) {
         if (!roundOver) {
             sockServer.sendData("Please wait for the dealer to finish...\n");
             sockServer.getPlayer().setInGame(false);
@@ -178,38 +167,61 @@ public class Dealer extends JFrame {
         }
     }
 
-    private void checkAllPlayersStand() {
+    private synchronized void checkAllPlayersStand() {
         boolean allPlayersStand = sockServers.stream().allMatch(sockServer -> !sockServer.getPlayer().getInGame());
+        System.out.println("All players stand: " + allPlayersStand);
+
         if (allPlayersStand) {
-            dealerTurn();
+            boolean allPlayersNotInGame = sockServers.stream().allMatch(sockServer -> !sockServer.getPlayer().getInGame());
+            if (allPlayersNotInGame && !dealer.getInGame()) {
+                System.out.println("Calling dealerTurn()");
+                dealerTurn();
+            }
         }
     }
 
+
     private void dealerTurn() {
+        System.out.println("Turno del dealer");
         while (dealer.getHandValue() < 17) {
-            dealer.addCardToHand(deck.dealCard());
+            Card dealerCard = deck.dealCard();
+            if (dealerCard != null) {
+                dealer.addCardToHand(dealerCard);
+            } else {
+                deck = new Deck();
+                break;
+            }
         }
 
         displayMessage("Dealer's hand: " + dealer.getHand() + "\n");
 
         for (SockServer sockServer : sockServers) {
             Player player = sockServer.getPlayer();
-            if (player.getHandValue() <= 21) {
-                if (dealer.getHandValue() > 21 || dealer.getHandValue() < player.getHandValue()) {
-                    sockServer.sendData("You win!\n");
+            if (player.getInGame()) {
+                if (dealer.getHandValue() > 21) {
+                    // Dealer busts, player wins
+                    sockServer.sendData("Dealer busts! You win!\n");
+                } else if (player.getHandValue() > 21) {
+                    // Player busts, player loses
+                    sockServer.sendData("You bust! You lose!\n");
                 } else if (dealer.getHandValue() > player.getHandValue()) {
+                    // Dealer wins
                     sockServer.sendData("You lose!\n");
+                } else if (dealer.getHandValue() < player.getHandValue()) {
+                    // Player wins
+                    sockServer.sendData("You win!\n");
                 } else {
+                    // It's a tie
                     sockServer.sendData("It's a tie!\n");
                 }
-            } else {
-                sockServer.sendData("You bust! You lose!\n");
             }
         }
 
         roundOver = true;
         dealButton.setEnabled(true);
+        sendDataToAll("Round over. You can start a new round.\n");
     }
+
 
     public Player getDealer() {
         return dealer;
