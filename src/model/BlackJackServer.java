@@ -34,7 +34,7 @@ public class BlackJackServer {
             connectedPlayerCount = 0;
             deck = new Deck();
             gameStarted = false;
-            game = new Game();  // Crear instancia de Game
+            game = new Game(); // Crear instancia de Game
             System.out.println("Servidor en ejecución. Esperando conexiones en el puerto " + PORT + "...");
         } catch (IOException e) {
             e.printStackTrace();
@@ -123,7 +123,8 @@ public class BlackJackServer {
         switch (action.toUpperCase()) {
             case "PEDIR":
                 player.getHand().addCard(deck.dealCard());
-                player.sendMessage("Carta recibida: " + player.getHand().getCards().get(player.getHand().getCards().size() - 1));
+                player.sendMessage(
+                        "Carta recibida: " + player.getHand().getCards().get(player.getHand().getCards().size() - 1));
                 player.sendMessage("Puntuación actual: " + player.getHand().getScore());
                 if (player.getHand().isBust()) {
                     player.sendMessage("Has superado 21. ¡Perdiste!");
@@ -146,10 +147,6 @@ public class BlackJackServer {
         if (allPlayersStand() || allPlayersBusted()) {
             endGame();
         }
-    }
-
-    private void endGame() {
-        resetGame();
     }
 
     public synchronized void removeClient(BlackJackClientHandler clientHandler) {
@@ -211,6 +208,39 @@ public class BlackJackServer {
 
     public List<BlackJackClientHandler> getConnectedClients() {
         return connectedClients;
+    }
+
+    public synchronized void passTurn() {
+        currentPlayerIndex = (currentPlayerIndex + 1) % connectedPlayerCount;
+        // Aquí podrías enviar un mensaje al nuevo jugador activo
+    }
+
+    public synchronized boolean allPlayersDisconnected() {
+        for (BlackJackClientHandler player : connectedClients) {
+            if (player.getPlayer().getInGame()) {
+                return false; // Al menos un jugador sigue conectado
+            }
+        }
+        return true; // Todos los jugadores están desconectados
+    }
+
+    public synchronized void endGame() {
+        // Verifica si todos los jugadores están desconectados
+        boolean allPlayersDisconnected = true;
+
+        for (BlackJackClientHandler player : connectedClients) {
+            if (player.getPlayer().getInGame()) {
+                allPlayersDisconnected = false;
+                break;
+            }
+        }
+
+        // Si todos los jugadores están desconectados, finaliza la partida
+        if (allPlayersDisconnected) {
+            resetGame(); // Reiniciar el juego
+            // Notifica a todos los jugadores que la partida ha terminado
+            broadcastMessage("La partida ha terminado. Todos los jugadores están desconectados.");
+        }
     }
 
     public static void main(String[] args) {

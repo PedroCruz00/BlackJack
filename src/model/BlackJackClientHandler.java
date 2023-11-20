@@ -30,10 +30,19 @@ public class BlackJackClientHandler implements Runnable {
         }
     }
 
+    // Método para verificar si un cliente está desconectado
+    private boolean isClientDisconnected() {
+        try {
+            input.ready(); // Verifica si hay datos listos para ser leídos
+            return false; // El cliente sigue conectado
+        } catch (IOException e) {
+            return true; // Error al leer datos, el cliente está desconectado
+        }
+    }
+
     @Override
     public void run() {
         try {
-            // Obtener el nombre del jugador
             String playerName = input.readLine();
 
             // Verificar si el nombre del jugador ya está en uso
@@ -46,31 +55,28 @@ public class BlackJackClientHandler implements Runnable {
 
             server.addPlayerName(playerName);
 
-            // Esperar a que se inicie el juego
             while (!server.isGameStarted()) {
-                // Esperar al mensaje de inicio del juego del servidor
                 String message = input.readLine();
 
-                // Verificar si el mensaje indica que el juego ha comenzado
                 if (message.equalsIgnoreCase("¡La partida ha comenzado!")) {
                     startGame();
                     break;
                 }
 
-                // Mostrar el mensaje de espera o información adicional
                 System.out.println(message);
             }
 
-            // Procesar los comandos del jugador mientras el juego esté en curso
             while (server.isGameStarted()) {
-                // Leer el comando del jugador
                 String command = input.readLine();
 
-                // Procesar el comando
+                if (isClientDisconnected()) {
+                    handleDisconnection();
+                    break;
+                }
+
                 processCommand(command);
                 lastAction = command;
 
-                // Verificar si el juego ha terminado
                 if (!server.isGameStarted()) {
                     break;
                 }
@@ -78,7 +84,6 @@ public class BlackJackClientHandler implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            // Cerrar conexiones y limpiar recursos
             try {
                 input.close();
                 output.close();
@@ -87,6 +92,15 @@ public class BlackJackClientHandler implements Runnable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void handleDisconnection() {
+        player.setInGame(false);
+        server.passTurn();
+
+        if (server.allPlayersDisconnected()) {
+            server.endGame();
         }
     }
 
