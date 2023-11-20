@@ -95,6 +95,7 @@ public class StartClient extends JFrame {
                     BlackJackClient client = new BlackJackClient(serverAddressField.getText(),serverPortField.getText());
                     client.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
                     client.runClient();
+
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(null, "Ingresa un puerto válido.");
                 }

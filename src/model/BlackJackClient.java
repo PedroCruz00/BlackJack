@@ -19,7 +19,6 @@ public class BlackJackClient extends JFrame {
     private String message ;
     private ObjectInputStream input;
     private ObjectOutputStream output;
-    private String chatServer;
     private boolean inGame;
 
     public BlackJackClient(String ip, String port) {
@@ -51,9 +50,9 @@ public class BlackJackClient extends JFrame {
                     public void actionPerformed( ActionEvent event )
                     {
                         sendData( "stay" );
-                    } // end method actionPerformed
-                } // end anonymous inner class
-        ); // end call to addActionListener
+                    }
+                }
+        );
 
         buttons.add(hit, BorderLayout.SOUTH);
         buttons.add(stay, BorderLayout.SOUTH);
@@ -76,22 +75,11 @@ public class BlackJackClient extends JFrame {
         }
     }
 
-    public void start() {
-        try {
-            while (inGame) {
-                processConnection();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            closeConnection();
-        }
-    }
     private void connectToServer() throws IOException
     {
         displayMessage( "Attempting connection\n" );
 
-        socket = new Socket( InetAddress.getByName( chatServer ), serverPort );
+        socket = new Socket( serverIp, serverPort );
 
         displayMessage( "Connected to: " +
                 socket.getInetAddress().getHostName() );
@@ -109,14 +97,12 @@ public class BlackJackClient extends JFrame {
     } // en
     private void processConnection() throws IOException
     {
-
-
         do
         {
             try
             {
-                message = ( String ) input.readObject(); // read new message
-                displayMessage( "\n" + message ); // display message
+                message = ( String ) input.readObject();
+                displayMessage( "\n" + message );
                 if (message.contains("Bust!") || message.contains("Please Wait")){
                     buttons.setVisible(false);
                 }
